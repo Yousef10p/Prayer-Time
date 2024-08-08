@@ -86,9 +86,12 @@ function start() {
 
         let data = await fetch(`https://api.aladhan.com/v1/timings/${y}?latitude=${lat}&longitude=${lot}&method=4`);
         data = await data.json();
-
+        let dar = await fetch(`https://api.aladhan.com/v1/gToH/${y}?adjustment=2`);
+        dar = await dar.json();
+        console.log(Number(dar.data.hijri.day));
+        
         //setting the dateAr and Eng and day
-        currentDateTimeAssign[0] = `${Number(data.data.date.hijri.day)} ${data.data.date.hijri.month.ar}`; // 2 صفر
+        currentDateTimeAssign[0] = `${Number(dar.data.hijri.day)} ${data.data.date.hijri.month.ar}`; // 2 صفر
         currentDateTimeAssign[1] = data.data.date.hijri.weekday.ar;
         currentDateTimeAssign[2] = y;
 
