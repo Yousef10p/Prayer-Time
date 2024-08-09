@@ -7,9 +7,9 @@ const clock = document.querySelector('.clock');
 let lat, lot;
 let x = new Date();
 let y = `${x.getDate() >= 10 ? `${x.getDate()}` : `0${x.getDate()}`}-${(x.getMonth() + 1) >= 10 ? `${x.getMonth() + 1}` : `0${x.getMonth() + 1}`}-${x.getFullYear()}`;
-
+let timings;
 async function start() {
-
+    
 
     clock.innerHTML = getclock();
     setInterval(() => {
@@ -67,7 +67,6 @@ async function getData() {
     data = await data.json();
     let dar = await fetch(`https://api.aladhan.com/v1/gToH/${y}?adjustment=2`);
     dar = await dar.json();
-    console.log(Number(dar.data.hijri.day));
 
     //setting the dateAr and Eng and day
     currentDateTimeAssign[0] = `${Number(dar.data.hijri.day)} ${data.data.date.hijri.month.ar}`; // 2 صفر
@@ -85,11 +84,11 @@ async function getData() {
 
 
     //assign prary times;
-    let timings = [
+     timings = [
         { time: data.data.timings.Fajr, time12sys: to12sys(data.data.timings.Fajr), obj: document.querySelectorAll('.prayTime')[0], ar: 'الفجر' },
         { time: data.data.timings.Dhuhr, time12sys: to12sys(data.data.timings.Dhuhr), obj: document.querySelectorAll('.prayTime')[1], ar: 'الظهر' },
         { time: data.data.timings.Maghrib, time12sys: to12sys(data.data.timings.Maghrib), obj: document.querySelectorAll('.prayTime')[2], ar: 'المغرب' },
-        { time: `21:55`, time12sys: to12sys(`21:55`), obj: document.querySelectorAll('.prayTime')[3], ar: 'منتصف الليل' },
+        { time: data.data.timings.Midnight, time12sys: to12sys(data.data.timings.Midnight), obj: document.querySelectorAll('.prayTime')[3], ar: 'منتصف الليل' },
         { time: data.data.timings.Sunrise, time12sys: to12sys(data.data.timings.Sunrise), obj: document.querySelectorAll('.prayTime')[4], ar: 'الشروق' },
         { time: data.data.timings.Asr, time12sys: to12sys(data.data.timings.Asr), obj: document.querySelectorAll('.prayTime')[5], ar: 'العصر' },
         { time: data.data.timings.Isha, time12sys: to12sys(data.data.timings.Isha), obj: document.querySelectorAll('.prayTime')[6], ar: 'العشاء' },
@@ -105,189 +104,218 @@ async function getData() {
 
     //assign next 9lah
     //update the box with قبل او بعد
+    setBox();
+    const boxUpdate = setInterval(() => {
+        let minimum = minimum2 = 99999999;
+        let prevEvent = nextEvent = null;
+        let h = m = null;
+        const currentTime = new Date();
+        const currentTimeInSec = (currentTime.getHours() * 3600) + (currentTime.getMinutes() * 60) + (currentTime.getSeconds());
+        // const currentTimeInSec = (5 * 3600) + (45 * 60);
 
-    
-    setInterval(() => {
-        let nd = new Date();
-        let currentInSec = (nd.getHours() * 60 * 60) + (nd.getMinutes() * 60) + (nd.getSeconds());
-
-        let min = 999999;
-
-        let obj = null, obj2 = null;
-
-
-        timings.forEach(e => {//next event
-            if (Math.abs(currentInSec - ((Number(e.time[0] + e.time[1])) * 3600 + (Number(e.time[3] + e.time[4]) * 60))) < min && ((Number(e.time[0] + e.time[1])) * 3600 + (Number(e.time[3] + e.time[4]) * 60)) > currentInSec) {
-                min = Math.abs(currentInSec - ((Number(e.time[0] + e.time[1])) * 3600 + (Number(e.time[3] + e.time[4]) * 60)))
-                obj = e;
+        timings.forEach(e => {
+            let objTimeSec = Number(e.time[0] + e.time[1]) * 3600 + Number(e.time[3] + e.time[4]) * 60;
+            if (Math.abs(currentTimeInSec - objTimeSec) < minimum && currentTimeInSec < objTimeSec) {
+                minimum = Math.abs(currentTimeInSec - objTimeSec);
+                nextEvent = e;
             }
-        });
 
-        min = 999999;
-        timings.forEach(e => {//prev event
-            if (Math.abs(currentInSec - ((Number(e.time[0] + e.time[1])) * 3600 + (Number(e.time[3] + e.time[4]) * 60))) < min && ((Number(e.time[0] + e.time[1])) * 3600 + (Number(e.time[3] + e.time[4]) * 60)) < currentInSec) {
-                min = Math.abs(currentInSec - ((Number(e.time[0] + e.time[1])) * 3600 + (Number(e.time[3] + e.time[4]) * 60)))
-                obj2 = e;
+            if (Math.abs(currentTimeInSec - objTimeSec) < minimum2 && objTimeSec < currentTimeInSec) {
+                minimum2 = Math.abs(currentTimeInSec - objTimeSec);
+                prevEvent = e;
             }
-        });
 
+        });
         
 
-        if (obj != null && obj2 != null) {
-            if (currentInSec - ((Number(obj2.time[0] + obj2.time[1])) * 3600 + (Number(obj2.time[3] + obj2.time[4]) * 60)) < 1200) {
-                let targetInSecPrev = (Number(`${obj2.time[0]}${obj2.time[1]}`) * 60 * 60) + (Number(`${obj2.time[3]}${obj2.time[4]}`) * 60) + 0;
-                //time left for the prev event
-
-                let difInSec = currentInSec - targetInSecPrev;
-                let h = Math.floor(difInSec / 3600);
-                difInSec = difInSec % 3600;
-                let m = Math.floor(difInSec / 60);
-                m = m < 10 ? `0${m}` : m;
-                difInSec = difInSec % 60;
-                difInSec = difInSec < 10 ? `0${difInSec}` : difInSec;
-                let clockLeft = `${h}:${m}:${difInSec}`;
-                next9lah[1].innerHTML = clockLeft;
-
-
-
-                next9lah[0].innerHTML = `${obj2.ar}  قبل `;
-
-                obj.obj.classList.remove('attent');
-                obj2.obj.classList.add('attent');
-            }
-            else {
-                let targetInSecNext = (Number(`${obj.time[0]}${obj.time[1]}`) * 60 * 60) + (Number(`${obj.time[3]}${obj.time[4]}`) * 60) + 0;
-                //time left for the next event
-
-                let difInSec = targetInSecNext - currentInSec;
-                let h = Math.floor(difInSec / 3600);
-                difInSec = difInSec % 3600;
-                let m = Math.floor(difInSec / 60);
-                m = m < 10 ? `0${m}` : m;
-                difInSec = difInSec % 60;
-                difInSec = difInSec < 10 ? `0${difInSec}` : difInSec;
-                let clockLeft = `${h}:${m}:${difInSec}`;
-                next9lah[1].innerHTML = clockLeft;
-
-
-                next9lah[0].innerHTML = `${obj.ar}  بعد `;
-                obj.obj.classList.add('attent');
-                obj2.obj.classList.remove('attent');
-
-
-            }
-
-
-        } else {
-            if (obj == null && obj2 != null) {
-                
-                min = 9999;
-                timings.forEach(e => {//next event
-                    if (((Number(e.time[0] + e.time[1])) * 3600 + (Number(e.time[3] + e.time[4]) * 60)) < min) {
-                        min = ((Number(e.time[0] + e.time[1])) * 3600 + (Number(e.time[3] + e.time[4]) * 60))
-                        obj = e;
-                    }
-                });
-
-                if (currentInSec - ((Number(obj2.time[0] + obj2.time[1])) * 3600 + (Number(obj2.time[3] + obj2.time[4]) * 60)) > 1200) {
-                    let difInSec = Math.abs(currentInSec - ((23 * 3600) + (59 * 60) + (60))) + min;
-                    let h = Math.floor(difInSec / 3600);
-                    difInSec = difInSec % 3600;
-                    let m = Math.floor(difInSec / 60);
-                    m = m < 10 ? `0${m}` : m;
-                    difInSec = difInSec % 60;
-                    difInSec = difInSec < 10 ? `0${difInSec}` : difInSec;
-                    let clockLeft = `${h}:${m}:${difInSec}`;
-                    next9lah[1].innerHTML = clockLeft;
-
-
-                    next9lah[0].innerHTML = `${obj.ar}  بعد `;
-                    obj.obj.classList.add('attent');
-                    obj2.obj.classList.remove('attent');
+        
+       
+        if (nextEvent == null) {
+            timings.forEach(e => {
+                let objTimeSec = Number(e.time[0] + e.time[1]) * 3600 + Number(e.time[3] + e.time[4]) * 60;
+                if (objTimeSec < minimum) {
+                    minimum = objTimeSec;
+                    nextEvent = e;
                 }
-                else {
-                    let targetInSecPrev = (Number(`${obj2.time[0]}${obj2.time[1]}`) * 60 * 60) + (Number(`${obj2.time[3]}${obj2.time[4]}`) * 60) + 0;
-                    //time left for the prev event
+            })
+            minimum += (Math.abs(currentTimeInSec - ((23 * 3600) + (59 * 60) + 60)));
+        }
 
-                    let difInSec = currentInSec - targetInSecPrev;
-                    let h = Math.floor(difInSec / 3600);
-                    difInSec = difInSec % 3600;
-                    let m = Math.floor(difInSec / 60);
-                    m = m < 10 ? `0${m}` : m;
-                    difInSec = difInSec % 60;
-                    difInSec = difInSec < 10 ? `0${difInSec}` : difInSec;
-                    let clockLeft = `${h}:${m}:${difInSec}`;
-                    next9lah[1].innerHTML = clockLeft;
+        
+        h = Math.floor(minimum / 3600);
+        minimum = minimum % 3600;
+        m = Math.floor(minimum / 60);
+        m = m >= 10 ? m :`0${m}`;
+        minimum = minimum % 60;
+        minimum = minimum >= 10 ? minimum :`0${minimum}`;
+        next9lah[0].innerHTML = nextEvent.ar + ' ' + 'بعد';
+        next9lah[1].innerHTML = `${h}:${m}:${minimum}`;
+        
+        
+        
 
-
-
-                    next9lah[0].innerHTML = `${obj2.ar}  قبل `;
-
-                    obj.obj.classList.remove('attent');
-                    obj2.obj.classList.add('attent');
+        if (prevEvent == null) {
+            minimum2 = -1;
+            timings.forEach(e => {
+                let objTimeSec = Number(e.time[0] + e.time[1]) * 3600 + Number(e.time[3] + e.time[4]) * 60;
+                if (objTimeSec > minimum2) {
+                    minimum2 = objTimeSec;
+                    prevEvent = e;
                 }
-            }
-            else if (obj != null && obj2 == null) {
-                max = -1;
-                timings.forEach(e => {//next event
-                    if (((Number(e.time[0] + e.time[1])) * 3600 + (Number(e.time[3] + e.time[4]) * 60)) > max) {
-                        max = ((Number(e.time[0] + e.time[1])) * 3600 + (Number(e.time[3] + e.time[4]) * 60))
-                        obj2 = e;
-                    }
-                });
-                
-                
-                difInSec = Math.abs(max - ((23 * 3600) + (59 * 60) + (60))) + currentInSec
-                
+            })
+            minimum2 = (Math.abs(minimum2 - ((23 * 3600) + (59 * 60) + 60))) + currentTimeInSec;
+        }
 
-
-                if (difInSec < 1200) {
-                    let h = Math.floor(difInSec / 3600);
-                    difInSec = difInSec % 3600;
-                    let m = Math.floor(difInSec / 60);
-                    m = m < 10 ? `0${m}` : m;
-                    difInSec = difInSec % 60;
-                    difInSec = difInSec < 10 ? `0${difInSec}` : difInSec;
-                    let clockLeft = `${h}:${m}:${difInSec}`;
-                    next9lah[1].innerHTML = clockLeft;
-
-
-
-                    next9lah[0].innerHTML = `${obj2.ar}  قبل `;
-
-                    obj.obj.classList.remove('attent');
-                    obj2.obj.classList.add('attent');
-                }
-                else {
-                    let targetInSecNext = (Number(`${obj.time[0]}${obj.time[1]}`) * 60 * 60) + (Number(`${obj.time[3]}${obj.time[4]}`) * 60) + 0;
-                    //time left for the next event
-
-                    let difInSec = targetInSecNext - currentInSec;
-                    let h = Math.floor(difInSec / 3600);
-                    difInSec = difInSec % 3600;
-                    let m = Math.floor(difInSec / 60);
-                    m = m < 10 ? `0${m}` : m;
-                    difInSec = difInSec % 60;
-                    difInSec = difInSec < 10 ? `0${difInSec}` : difInSec;
-                    let clockLeft = `${h}:${m}:${difInSec}`;
-                    next9lah[1].innerHTML = clockLeft;
-
-
-                    next9lah[0].innerHTML = `${obj.ar}  بعد `;
-                    obj.obj.classList.add('attent');
-                    obj2.obj.classList.remove('attent');
-                }
-            }
+        
+        
+        
+        if (minimum2 < 1200) {
+            h = Math.floor(minimum2 / 3600);
+            minimum = minimum2 % 3600;
+            m = Math.floor(minimum2 / 60);
+            m = m >= 10? m : `0${m}`;
+            minimum2 = minimum2 % 60;
+            minimum2 = minimum2 >= 10 ? minimum2 : `0${minimum2}`;
+            infoGeneral.innerHTML = prevEvent.ar + ' ' + 'قبل';
+            infoGeneral.innerHTML += `${h}:${m}:${minimum2}`;
+            infoGeneral.classList.add('attent');
+            prevEvent.obj.classList.add('attent');
             
         }
-    }, 1000);
+        else {
+
+            infoGeneral.innerHTML = 'اللهم صلِ على محمد'
+            infoGeneral.classList.remove('attent');
+            prevEvent.obj.classList.remove('attent');
+        }
+
+
+    }, 1000)
 
 
 
 
 
-    infoGeneral.innerHTML = 'اللهم صلِ على نبينا محمد';
+
+
+
+
 }
+
+
+
+
+
+
+
+function setBox(){
+    
+        let minimum = minimum2 = 99999999;
+        let prevEvent = nextEvent = null;
+        let h = m = null;
+        const currentTime = new Date();
+        const currentTimeInSec = (currentTime.getHours() * 3600) + (currentTime.getMinutes() * 60) + (currentTime.getSeconds());
+        // const currentTimeInSec = (5 * 3600) + (45 * 60);
+
+        timings.forEach(e => {
+            let objTimeSec = Number(e.time[0] + e.time[1]) * 3600 + Number(e.time[3] + e.time[4]) * 60;
+            if (Math.abs(currentTimeInSec - objTimeSec) < minimum && currentTimeInSec < objTimeSec) {
+                minimum = Math.abs(currentTimeInSec - objTimeSec);
+                nextEvent = e;
+            }
+
+            if (Math.abs(currentTimeInSec - objTimeSec) < minimum2 && objTimeSec < currentTimeInSec) {
+                minimum2 = Math.abs(currentTimeInSec - objTimeSec);
+                prevEvent = e;
+            }
+
+        });
+        
+
+        
+       
+        if (nextEvent == null) {
+            timings.forEach(e => {
+                let objTimeSec = Number(e.time[0] + e.time[1]) * 3600 + Number(e.time[3] + e.time[4]) * 60;
+                if (objTimeSec < minimum) {
+                    minimum = objTimeSec;
+                    nextEvent = e;
+                }
+            })
+            minimum += (Math.abs(currentTimeInSec - ((23 * 3600) + (59 * 60) + 60)));
+        }
+
+        
+        h = Math.floor(minimum / 3600);
+        minimum = minimum % 3600;
+        m = Math.floor(minimum / 60);
+        m = m >= 10 ? m :`0${m}`;
+        minimum = minimum % 60;
+        minimum = minimum >= 10 ? minimum :`0${minimum}`;
+        next9lah[0].innerHTML = nextEvent.ar + ' ' + 'بعد';
+        next9lah[1].innerHTML = `${h}:${m}:${minimum}`;
+        
+        
+        
+
+        if (prevEvent == null) {
+            minimum2 = -1;
+            timings.forEach(e => {
+                let objTimeSec = Number(e.time[0] + e.time[1]) * 3600 + Number(e.time[3] + e.time[4]) * 60;
+                if (objTimeSec > minimum2) {
+                    minimum2 = objTimeSec;
+                    prevEvent = e;
+                }
+            })
+            minimum2 = (Math.abs(minimum2 - ((23 * 3600) + (59 * 60) + 60))) + currentTimeInSec;
+        }
+
+        
+        
+        
+        if (minimum2 < 1200) {
+            h = Math.floor(minimum2 / 3600);
+            minimum = minimum2 % 3600;
+            m = Math.floor(minimum2 / 60);
+            m = m >= 10? m : `0${m}`;
+            minimum2 = minimum2 % 60;
+            minimum2 = minimum2 >= 10 ? minimum2 : `0${minimum2}`;
+            infoGeneral.innerHTML = prevEvent.ar + ' ' + 'قبل';
+            infoGeneral.innerHTML += `${h}:${m}:${minimum2}`;
+            infoGeneral.classList.add('attent');
+            prevEvent.obj.classList.add('attent');
+            
+        }
+        else {
+
+            infoGeneral.innerHTML = 'اللهم صلِ على محمد'
+            infoGeneral.classList.remove('attent');
+            prevEvent.obj.classList.remove('attent');
+        }
+
+
+    
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 function getclock() {
@@ -307,9 +335,8 @@ function getclock() {
     else {
         return `${h}:${m}:${s} ص`;
     }
-
-
 }
+
 function to12sys(hourStr) {
     let newHour;
     let hour = Number(`${hourStr[0]}${hourStr[1]}`);
